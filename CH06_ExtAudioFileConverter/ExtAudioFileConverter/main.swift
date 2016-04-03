@@ -13,23 +13,27 @@ let kInputFileLocation = "/Users/alestsurko/Desktop/FBA1.mp3" as CFString
 let kOutputFile = "/Users/alestsurko/Desktop/output.aif" as CFString
 
 // MARK: User data struct
-struct AudioConverterSettings {
+
+struct AudioConverterSettings
+{
     var outputFormat = AudioStreamBasicDescription()
     var inputFile: ExtAudioFileRef = nil
     var outputFile: AudioFileID = nil
 }
 
 // MARK: Utility functions
-func CheckError(error: OSStatus, operation: String) {
-    guard error != noErr else {
-        return
-    }
+
+func CheckError(error: OSStatus, operation: String)
+{
+    guard error != noErr else { return }
     
     var result: String = ""
     var char = Int(error.bigEndian)
-    
-    for _ in 0..<4 {
-        guard isprint(Int32(char&255)) == 1 else {
+
+    for _ in 0 ..< 4
+    {
+        guard isprint(Int32(char&255)) == 1 else
+        {
             result = "\(error)"
             break
         }
@@ -42,32 +46,33 @@ func CheckError(error: OSStatus, operation: String) {
     exit(1)
 }
 
-func Convert(inout settings: AudioConverterSettings) {
+func Convert(inout settings: AudioConverterSettings)
+{
     let outputBufferSize: UInt32 = 32 * 1024
     let sizePerPacket = settings.outputFormat.mBytesPerPacket
     let packetsPerBuffer = outputBufferSize / sizePerPacket
     let outputBuffer = malloc(sizeof(UInt8) * Int(outputBufferSize))
     var outputFilePacketPosition: UInt32 = 0
-    
-    while true {
+
+    while true
+    {
         var convertedData = AudioBufferList()
         convertedData.mNumberBuffers = 1
         convertedData.mBuffers.mNumberChannels = settings.outputFormat.mChannelsPerFrame
         convertedData.mBuffers.mDataByteSize = outputBufferSize
         convertedData.mBuffers.mData = outputBuffer
-        
+
         var frameCount = packetsPerBuffer
+
+        CheckError(ExtAudioFileRead(settings.inputFile, &frameCount, &convertedData), operation: "Couldn't read from input file")
         
-        CheckError(ExtAudioFileRead(settings.inputFile, &frameCount, &convertedData),
-            operation: "Couldn't read from input file")
-        
-        if frameCount == 0 {
+        if frameCount == 0
+        {
             print("Done reading from file.\n")
             return
         }
         
-        CheckError(AudioFileWritePackets(settings.outputFile, false, frameCount, nil, Int64(outputFilePacketPosition/settings.outputFormat.mBytesPerPacket), &frameCount, convertedData.mBuffers.mData),
-            operation: "Couldn't write packets to file")
+        CheckError(AudioFileWritePackets(settings.outputFile, false, frameCount, nil, Int64(outputFilePacketPosition/settings.outputFormat.mBytesPerPacket), &frameCount, convertedData.mBuffers.mData), operation: "Couldn't write packets to file")
         
         outputFilePacketPosition+=(frameCount * settings.outputFormat.mBytesPerPacket)
     }
@@ -75,7 +80,8 @@ func Convert(inout settings: AudioConverterSettings) {
 
 
 // MARK: Main function
-func main() {
+func main()
+{
     // Open input file
     var audioConverterSettings = AudioConverterSettings()
     

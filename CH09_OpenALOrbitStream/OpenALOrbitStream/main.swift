@@ -15,7 +15,9 @@ let BUFFER_COUNT = 3
 let RUN_TIME = 20.0
 
 // MARK: user-data struct
-class StreamPlayer {
+
+class StreamPlayer
+{
     var	dataFormat = AudioStreamBasicDescription()
     var bufferSizeBytes: UInt32 = 0
     var fileLengthFrames: Int64 = 0
@@ -26,16 +28,18 @@ class StreamPlayer {
 
 // MARK: - utility functions -
 // generic error handler - if err is nonzero, prints error message and exits program.
-func CheckError(error: OSStatus, operation: String) {
-    guard error != noErr else {
-        return
-    }
+
+func CheckError(error: OSStatus, operation: String)
+{
+    guard error != noErr else { return }
     
     var result: String = ""
     var char = Int(error.bigEndian)
     
-    for _ in 0..<4 {
-        guard isprint(Int32(char&255)) == 1 else {
+    for _ in 0 ..< 4
+    {
+        guard isprint(Int32(char&255)) == 1 else
+        {
             result = "\(error)"
             break
         }
@@ -48,39 +52,40 @@ func CheckError(error: OSStatus, operation: String) {
     exit(1)
 }
 
-func CheckALError(operation: String) {
+func CheckALError(operation: String)
+{
     let alErr = alGetError()
-    guard alErr != AL_NO_ERROR else {
-        return
-    }
+    guard alErr != AL_NO_ERROR else { return }
     
     var errMessage: String = ""
     
-    switch alErr {
-    case AL_INVALID_NAME:
-        errMessage = "OpenAL Error: \(operation) (AL_INVALID_NAME)"
-        break
-    case AL_INVALID_VALUE:
-        errMessage = "OpenAL Error: \(operation) (AL_INVALID_VALUE)"
-        break
-    case AL_INVALID_ENUM:
-        errMessage = "OpenAL Error: \(operation) (AL_INVALID_ENUM)"
-        break
-    case AL_INVALID_OPERATION:
-        errMessage = "OpenAL Error: \(operation) (AL_INVALID_OPERATION)"
-        break
-    case AL_OUT_OF_MEMORY:
-        errMessage = "OpenAL Error: \(operation) (AL_OUT_OF_MEMORY)"
-        break
-    default:
-        break
+    switch alErr
+    {
+        case AL_INVALID_NAME:
+            errMessage = "OpenAL Error: \(operation) (AL_INVALID_NAME)"
+            break
+        case AL_INVALID_VALUE:
+            errMessage = "OpenAL Error: \(operation) (AL_INVALID_VALUE)"
+            break
+        case AL_INVALID_ENUM:
+            errMessage = "OpenAL Error: \(operation) (AL_INVALID_ENUM)"
+            break
+        case AL_INVALID_OPERATION:
+            errMessage = "OpenAL Error: \(operation) (AL_INVALID_OPERATION)"
+            break
+        case AL_OUT_OF_MEMORY:
+            errMessage = "OpenAL Error: \(operation) (AL_OUT_OF_MEMORY)"
+            break
+        default:
+            break
     }
-    
+
     print("\(errMessage)")
     exit(-1)
 }
 
-func updateSourceLocation(player: StreamPlayer) {
+func updateSourceLocation(player: StreamPlayer)
+{
     let theta = fmod(CFAbsoluteTimeGetCurrent() * ORBIT_SPEED, M_PI * 2)
     let x = 3 * ALfloat(cos(theta))
     let y = 0.5 * ALfloat(sin(theta))
@@ -90,18 +95,17 @@ func updateSourceLocation(player: StreamPlayer) {
 }
 
 
-func setUpExtAudioFile (inout player: StreamPlayer) -> OSStatus {
+func setUpExtAudioFile (inout player: StreamPlayer) -> OSStatus
+{
     let streamFileURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, STREAM_PATH, CFURLPathStyle.CFURLPOSIXPathStyle, false)
     
     // describe the client format - AL needs mono
     player.dataFormat = AudioStreamBasicDescription(mSampleRate: 44100, mFormatID: kAudioFormatLinearPCM, mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked, mBytesPerPacket: 2, mFramesPerPacket: 1, mBytesPerFrame: 2, mChannelsPerFrame: 1, mBitsPerChannel: 16, mReserved: 0)
     
-    CheckError(ExtAudioFileOpenURL(streamFileURL, &player.extAudioFile),
-        operation: "Couldn't open ExtAudioFile for reading")
+    CheckError(ExtAudioFileOpenURL(streamFileURL, &player.extAudioFile), operation: "Couldn't open ExtAudioFile for reading")
     
     // tell extAudioFile about our format
-    CheckError(ExtAudioFileSetProperty(player.extAudioFile, kExtAudioFileProperty_ClientDataFormat, UInt32(sizeof(AudioStreamBasicDescription)), &player.dataFormat),
-        operation: "Couldn't set client format on ExtAudioFile")
+    CheckError(ExtAudioFileSetProperty(player.extAudioFile, kExtAudioFileProperty_ClientDataFormat, UInt32(sizeof(AudioStreamBasicDescription)), &player.dataFormat), operation: "Couldn't set client format on ExtAudioFile")
     
     // figure out how big file is
     var propSize = UInt32(sizeof(player.fileLengthFrames.dynamicType))
@@ -117,7 +121,8 @@ func setUpExtAudioFile (inout player: StreamPlayer) -> OSStatus {
     return noErr
 }
 
-func fillALBuffer(inout player: StreamPlayer, alBuffer: ALuint) {
+func fillALBuffer(inout player: StreamPlayer, alBuffer: ALuint)
+{
     let bufferList = AudioBufferList.allocate(maximumBuffers: 1) // 1 channel
     
     // allocate sample buffer
@@ -130,11 +135,11 @@ func fillALBuffer(inout player: StreamPlayer, alBuffer: ALuint) {
     
     // read from ExtAudioFile into sampleBuffer
     var framesReadIntoBuffer: UInt32 = 0
-    repeat {
+    repeat
+    {
         var framesRead = UInt32(player.fileLengthFrames) - framesReadIntoBuffer
         bufferList[0].mData = sampleBuffer + Int(framesReadIntoBuffer * UInt32(sizeof(UInt16)))
-        CheckError(ExtAudioFileRead(player.extAudioFile, &framesRead, bufferList.unsafeMutablePointer),
-            operation: "ExtAudioFileRead failed")
+        CheckError(ExtAudioFileRead(player.extAudioFile, &framesRead, bufferList.unsafeMutablePointer), operation: "ExtAudioFileRead failed")
         framesReadIntoBuffer += framesRead
         player.totalFramesRead += Int64(framesRead)
         print("read \(framesRead) frames\n")
@@ -147,12 +152,14 @@ func fillALBuffer(inout player: StreamPlayer, alBuffer: ALuint) {
     free(sampleBuffer)
 }
 
-func refillALBuffers(inout player: StreamPlayer) {
+func refillALBuffers(inout player: StreamPlayer)
+{
     var processed = ALint()
     alGetSourcei (player.sources[0], AL_BUFFERS_PROCESSED, &processed)
     CheckALError ("couldn't get al_buffers_processed")
-    
-    while (processed > 0) {
+
+    while (processed > 0)
+    {
         var freeBuffer = ALuint()
         alSourceUnqueueBuffers(player.sources[0], 1, &freeBuffer)
         CheckALError("couldn't unqueue buffer")
@@ -161,14 +168,15 @@ func refillALBuffers(inout player: StreamPlayer) {
         alSourceQueueBuffers(player.sources[0], 1, &freeBuffer)
         CheckALError ("couldn't queue refilled buffer")
         print("re-queued buffer \(freeBuffer)\n")
-        processed--
+        processed -= 1
     }
     
 }
 
 // MARK: main
 
-func main() {
+func main()
+{
     var player = StreamPlayer()
     
     // prepare the ExtAudioFile for reading
@@ -186,8 +194,9 @@ func main() {
     var buffers: [ALuint] = [ALuint](count: BUFFER_COUNT, repeatedValue: 0)
     alGenBuffers(ALsizei(BUFFER_COUNT), &buffers)
     CheckALError ("Couldn't generate buffers")
-    
-    for i in 0..<BUFFER_COUNT {
+
+    for i in 0 ..< BUFFER_COUNT
+    {
         fillALBuffer(&player, alBuffer: buffers[i])
     }
     
@@ -214,7 +223,8 @@ func main() {
     // and wait
     print("Playing...\n")
     let startTime = time(nil)
-    repeat {
+    repeat
+    {
         // get next theta
         updateSourceLocation(player)
         CheckALError ("Couldn't set source position")

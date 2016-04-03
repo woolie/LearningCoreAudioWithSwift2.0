@@ -13,7 +13,8 @@ let ORBIT_SPEED = 1.0
 let RUN_TIME = 20.0
 
 // MARK: user-data struct
-class LoopPlayer {
+class LoopPlayer
+{
     var dataFormat = AudioStreamBasicDescription()
     var sampleBuffer: UnsafeMutablePointer<Void> = nil
     var bufferSizeBytes: UInt32 = 0
@@ -23,16 +24,17 @@ class LoopPlayer {
 
 // MARK: - utility functions -
 // generic error handler - if err is nonzero, prints error message and exits program.
-func CheckError(error: OSStatus, operation: String) {
-    guard error != noErr else {
-        return
-    }
+func CheckError(error: OSStatus, operation: String)
+{
+    guard error != noErr else { return }
     
     var result: String = ""
     var char = Int(error.bigEndian)
     
-    for _ in 0..<4 {
-        guard isprint(Int32(char&255)) == 1 else {
+    for _ in 0 ..< 4
+    {
+        guard isprint(Int32(char&255)) == 1 else
+        {
             result = "\(error)"
             break
         }
@@ -46,39 +48,40 @@ func CheckError(error: OSStatus, operation: String) {
 }
 
 
-func CheckALError(operation: String) {
+func CheckALError(operation: String)
+{
     let alErr = alGetError()
-    guard alErr != AL_NO_ERROR else {
-        return
-    }
+    guard alErr != AL_NO_ERROR else { return }
     
     var errMessage: String = ""
     
-    switch alErr {
-    case AL_INVALID_NAME:
-        errMessage = "OpenAL Error: \(operation) (AL_INVALID_NAME)"
-        break
-    case AL_INVALID_VALUE:
-        errMessage = "OpenAL Error: \(operation) (AL_INVALID_VALUE)"
-        break
-    case AL_INVALID_ENUM:
-        errMessage = "OpenAL Error: \(operation) (AL_INVALID_ENUM)"
-        break
-    case AL_INVALID_OPERATION:
-        errMessage = "OpenAL Error: \(operation) (AL_INVALID_OPERATION)"
-        break
-    case AL_OUT_OF_MEMORY:
-        errMessage = "OpenAL Error: \(operation) (AL_OUT_OF_MEMORY)"
-        break
-    default:
-        break
+    switch alErr
+    {
+        case AL_INVALID_NAME:
+            errMessage = "OpenAL Error: \(operation) (AL_INVALID_NAME)"
+            break
+        case AL_INVALID_VALUE:
+            errMessage = "OpenAL Error: \(operation) (AL_INVALID_VALUE)"
+            break
+        case AL_INVALID_ENUM:
+            errMessage = "OpenAL Error: \(operation) (AL_INVALID_ENUM)"
+            break
+        case AL_INVALID_OPERATION:
+            errMessage = "OpenAL Error: \(operation) (AL_INVALID_OPERATION)"
+            break
+        case AL_OUT_OF_MEMORY:
+            errMessage = "OpenAL Error: \(operation) (AL_OUT_OF_MEMORY)"
+            break
+        default:
+            break
     }
     
     print("\(errMessage)")
     exit(-1)
 }
 
-func updateSourceLocation(player: LoopPlayer) {
+func updateSourceLocation(player: LoopPlayer)
+{
     let theta = ALfloat(fmod(CFAbsoluteTimeGetCurrent() * ORBIT_SPEED, M_PI * 2))
     let x = 3 * cos(theta)
     let y = 0.5 * sin (theta)
@@ -87,19 +90,18 @@ func updateSourceLocation(player: LoopPlayer) {
     alSource3f(player.sources[0], AL_POSITION, x, y, z)
 }
 
-func loadLoopIntoBuffer(inout player: LoopPlayer) -> OSStatus {
+func loadLoopIntoBuffer(inout player: LoopPlayer) -> OSStatus
+{
     let loopFileURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, LOOP_PATH, CFURLPathStyle.CFURLPOSIXPathStyle, false)
     
     // describe the client format - AL needs mono
     player.dataFormat = AudioStreamBasicDescription(mSampleRate: 44100, mFormatID: kAudioFormatLinearPCM, mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked, mBytesPerPacket: 2, mFramesPerPacket: 1, mBytesPerFrame: 2, mChannelsPerFrame: 1, mBitsPerChannel: 16, mReserved: 0)
     
     var extAudioFile: ExtAudioFileRef = nil
-    CheckError(ExtAudioFileOpenURL(loopFileURL, &extAudioFile),
-        operation: "Couldn't open ExtAudioFile for reading")
+    CheckError(ExtAudioFileOpenURL(loopFileURL, &extAudioFile), operation: "Couldn't open ExtAudioFile for reading")
     
     // tell extAudioFile about our format
-    CheckError(ExtAudioFileSetProperty(extAudioFile, kExtAudioFileProperty_ClientDataFormat, UInt32(sizeof(AudioStreamBasicDescription)), &player.dataFormat),
-        operation: "Couldn't set client format on ExtAudioFile")
+    CheckError(ExtAudioFileSetProperty(extAudioFile, kExtAudioFileProperty_ClientDataFormat, UInt32(sizeof(AudioStreamBasicDescription)), &player.dataFormat), operation: "Couldn't set client format on ExtAudioFile")
     
     // figure out how big a buffer we need
     var fileLengthFrames: Int64 = 0
@@ -122,11 +124,11 @@ func loadLoopIntoBuffer(inout player: LoopPlayer) -> OSStatus {
     
     // loop reading into the ABL until buffer is full
     var totalFramesRead: UInt32 = 0
-    repeat {
+    repeat
+    {
         var framesRead = UInt32(UInt32(fileLengthFrames) - totalFramesRead)
         buffers[0].mData = player.sampleBuffer + Int(totalFramesRead * UInt32(sizeof(UInt16)))
-        CheckError(ExtAudioFileRead(extAudioFile, &framesRead, buffers.unsafeMutablePointer),
-            operation: "ExtAudioFileRead failed")
+        CheckError(ExtAudioFileRead(extAudioFile, &framesRead, buffers.unsafeMutablePointer), operation: "ExtAudioFileRead failed")
         totalFramesRead += framesRead
         print("read \(framesRead) frames\n")
     } while totalFramesRead < UInt32(fileLengthFrames)
@@ -138,13 +140,13 @@ func loadLoopIntoBuffer(inout player: LoopPlayer) -> OSStatus {
 
 // MARK: main
 
-func main() {
+func main()
+{
     var player = LoopPlayer()
     
     // convert to an OpenAL-friendly format and read into memory
-    CheckError(loadLoopIntoBuffer(&player),
-        operation: "Couldn't load loop into buffer")
-    
+    CheckError(loadLoopIntoBuffer(&player), operation: "Couldn't load loop into buffer")
+
     // set up OpenAL buffer
     let alDevice = alcOpenDevice(nil)
     CheckALError("Couldn't open AL device") // default device
@@ -187,7 +189,8 @@ func main() {
     // and wait
     print("Playing...\n")
     let startTime = time(nil)
-    repeat {
+    repeat
+    {
         // get next theta
         updateSourceLocation(player)
         CheckALError("Couldn't set looping source position")

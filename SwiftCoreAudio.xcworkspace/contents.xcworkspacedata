@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:CH01_CAMetadata/CH01_CAMetadata.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH02_CAToneFileGenerator/CH02_CAToneFileGenerator.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH04_Recorder/CH04_Recorder.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH05_Player/CH05_Player.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH06_AudioConverter/CH06_AudioConverter.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH06_ExtAudioFileConverter/CH06_ExtAudioFileConverter.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH07_AUGraphPlayer/CH07_AUGraphPlayer.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH07_AUGraphSineWave/CH07_AUGraphSineWave.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH07_AUGraphSpeechSynthesis/CH07_AUGraphSpeechSynthesis.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH08_AUGraphInput/CH08_AUGraphInput.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH09_OpenALOrbitLoop/CH09_OpenALOrbitLoop.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH09_OpenALOrbitStream/CH09_OpenALOrbitStream.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH10_iOSBackgroundingTone/CH10_iOSBackgroundingTone.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH10_iOSPlayThrough/CH10_iOSPlayThrough.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH11_MIDIToAUGraph/CH11_MIDIToAUGraph.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CH11_MIDIWifiSource/CH11_MIDIWifiSource.xcodeproj">
+   </FileRef>
+</Workspace>

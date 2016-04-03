@@ -118,8 +118,7 @@ func ComputeRecordBufferSize(format: AudioStreamBasicDescription, queue: AudioQu
             // Get the largest single packet size possible
             var propertySize = UInt32(sizeof(maxPacketSize.dynamicType))
 
-            CheckError(AudioQueueGetProperty(queue, kAudioConverterPropertyMaximumOutputPacketSize, &maxPacketSize, &propertySize),
-                operation: "Couldn't get queue's maximum output packet size")
+            CheckError(AudioQueueGetProperty(queue, kAudioConverterPropertyMaximumOutputPacketSize, &maxPacketSize, &propertySize), operation: "Couldn't get queue's maximum output packet size")
         }
         
         if format.mFramesPerPacket > 0
@@ -145,15 +144,17 @@ func ComputeRecordBufferSize(format: AudioStreamBasicDescription, queue: AudioQu
 }
 
 // MARK: Record callback function
-let AQInputCallback: AudioQueueInputCallback = {(var inUserData, inQueue, inBuffer, inStartTime, var inNumPackets, inPacketDesc) -> () in
+
+let AQInputCallback: AudioQueueInputCallback =
+{
+    (var inUserData, inQueue, inBuffer, inStartTime, var inNumPackets, inPacketDesc) -> () in
+
     let recorder = UnsafeMutablePointer<Recorder>(inUserData).memory
     
     if inNumPackets > 0
     {
         // Write packets to a file
-        CheckError(
-            AudioFileWritePackets(recorder.recordFile, false, inBuffer.memory.mAudioDataByteSize, inPacketDesc, recorder.recordPacket, &inNumPackets, inBuffer.memory.mAudioData),
-            operation: "AudioFileWritePackets failed")
+        CheckError(AudioFileWritePackets(recorder.recordFile, false, inBuffer.memory.mAudioDataByteSize, inPacketDesc, recorder.recordPacket, &inNumPackets, inBuffer.memory.mAudioData), operation: "AudioFileWritePackets failed")
         
         // Increment the packet index
         recorder.recordPacket += Int64(inNumPackets)
@@ -161,14 +162,11 @@ let AQInputCallback: AudioQueueInputCallback = {(var inUserData, inQueue, inBuff
         if recorder.running
         {
             CheckError(AudioQueueEnqueueBuffer(inQueue, inBuffer, 0, nil), operation: "AudioQueueEnqueueBuffer failed")
-            
-            
+
             /*// Level metering
             var level: [Float32] = [0]
             var levelSize = UInt32(sizeof(level.dynamicType))
-            CheckError(
-                AudioQueueGetProperty(inQueue, kAudioQueueProperty_CurrentLevelMeterDB, &level, &levelSize),
-                operation: "Couldn't get kAudioQueueProperty_CurrentLevelMeter")
+            CheckError(AudioQueueGetProperty(inQueue, kAudioQueueProperty_CurrentLevelMeterDB, &level, &levelSize), operation: "Couldn't get kAudioQueueProperty_CurrentLevelMeter")
             print(level)*/
         }
         
@@ -176,6 +174,7 @@ let AQInputCallback: AudioQueueInputCallback = {(var inUserData, inQueue, inBuff
 }
 
 // MARK: main function
+
 func main()
 {
     // Set up format

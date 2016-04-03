@@ -61,8 +61,7 @@ func Convert(settings: AudioConverterSettings)
     // Create the audioConverter object
     var audioConverter: AudioConverterRef = nil
     
-    CheckError(AudioConverterNew(&localSettings.inputFormat, &localSettings.outputFormat, &audioConverter),
-        operation: "AudioConverterNew failed")
+    CheckError(AudioConverterNew(&localSettings.inputFormat, &localSettings.outputFormat, &audioConverter), operation: "AudioConverterNew failed")
     
     var packetsPerBuffer: UInt32 = 0
     var outputBufferSize: UInt32 = 32 * 1024
@@ -72,8 +71,7 @@ func Convert(settings: AudioConverterSettings)
     {
         var size = UInt32(sizeof(sizePerPacket.dynamicType))
         
-        CheckError(AudioConverterGetProperty(audioConverter, kAudioConverterPropertyMaximumOutputPacketSize, &size, &sizePerPacket),
-            operation: "Couldn't get kAudioConverterPropertyMaximumOutputPacketSize")
+        CheckError(AudioConverterGetProperty(audioConverter, kAudioConverterPropertyMaximumOutputPacketSize, &size, &sizePerPacket), operation: "Couldn't get kAudioConverterPropertyMaximumOutputPacketSize")
         
         if sizePerPacket > outputBufferSize
         {

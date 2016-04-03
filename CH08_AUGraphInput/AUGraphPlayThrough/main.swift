@@ -17,7 +17,8 @@ import ApplicationServices
 // of "Swift Compiler - Custom Flags" in project Build Settings. The one already defined in this project.
 
 // MARK: User data struct
-class AUGraphPlayer {
+class AUGraphPlayer
+{
     var streamFormat = AudioStreamBasicDescription()
     
     var graph: AUGraph = nil
@@ -40,10 +41,12 @@ let InputRenderProc: AURenderCallback = {(inRefCon, ioActionFlags, inTimeStamp, 
     let player = UnsafeMutablePointer<AUGraphPlayer>(inRefCon).memory
     
     // Have we ever logged input timing? (for offset calculation)
-    if player.firstInputSampleTime < 0 {
+    if player.firstInputSampleTime < 0
+    {
         player.firstInputSampleTime = inTimeStamp.memory.mSampleTime
         
-        if player.firstOutputSampleTime > 0 && player.inToOutSampleTimeOffset < 0 {
+        if player.firstOutputSampleTime > 0 && player.inToOutSampleTimeOffset < 0
+        {
             player.inToOutSampleTimeOffset = player.firstInputSampleTime - player.firstOutputSampleTime
         }
     }
@@ -51,7 +54,8 @@ let InputRenderProc: AURenderCallback = {(inRefCon, ioActionFlags, inTimeStamp, 
     var inputProcErr = noErr
     inputProcErr = AudioUnitRender(player.inputUnit, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, player.inputBuffer.unsafeMutablePointer)
     
-    if inputProcErr == noErr {
+    if inputProcErr == noErr
+    {
         inputProcErr = player.ringBuffer.store(player.inputBuffer.unsafeMutablePointer, nFrames: inNumberFrames, frameNumber: Int64(inTimeStamp.memory.mSampleTime))
     }
     
@@ -63,10 +67,12 @@ let GraphRenderProc: AURenderCallback = {(inRefCon, ioActionFlags, inTimeStamp, 
     let player = UnsafeMutablePointer<AUGraphPlayer>(inRefCon).memory
     
     // Have we ever logged input timing? (for offset calculation)
-    if player.firstOutputSampleTime < 0 {
+    if player.firstOutputSampleTime < 0
+    {
         player.firstOutputSampleTime = inTimeStamp.memory.mSampleTime
         
-        if player.firstInputSampleTime > 0 && player.inToOutSampleTimeOffset < 0 {
+        if player.firstInputSampleTime > 0 && player.inToOutSampleTimeOffset < 0
+        {
             player.inToOutSampleTimeOffset = player.firstInputSampleTime - player.firstOutputSampleTime
         }
     }
@@ -79,16 +85,17 @@ let GraphRenderProc: AURenderCallback = {(inRefCon, ioActionFlags, inTimeStamp, 
 }
 
 // MARK: - utility functions -
-func CheckError(error: OSStatus, operation: String) {
-    guard error != noErr else {
-        return
-    }
+func CheckError(error: OSStatus, operation: String)
+{
+    guard error != noErr else { return }
     
     var result: String = ""
     var char = Int(error.bigEndian)
     
-    for _ in 0..<4 {
-        guard isprint(Int32(char&255)) == 1 else {
+    for _ in 0 ..< 4
+    {
+        guard isprint(Int32(char&255)) == 1 else
+        {
             result = "\(error)"
             break
         }
@@ -97,68 +104,57 @@ func CheckError(error: OSStatus, operation: String) {
     }
     
     print("Error: \(operation) (\(result))")
-    
     exit(1)
 }
 
-func CreateInputUnit(inout player: AUGraphPlayer) {
-    
+func CreateInputUnit(inout player: AUGraphPlayer)
+{
     // Generates a description that matches audio HAL
     var inputcd = AudioComponentDescription(componentType: kAudioUnitType_Output, componentSubType: kAudioUnitSubType_HALOutput, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
     
     let comp = AudioComponentFindNext(nil, &inputcd)
     
-    guard comp != nil else {
+    guard comp != nil else
+    {
         print("Can't get output unit")
         exit(-1)
     }
     
-    CheckError(AudioComponentInstanceNew(comp, &player.inputUnit),
-        operation: "Couldn't open component for inputUnit")
+    CheckError(AudioComponentInstanceNew(comp, &player.inputUnit), operation: "Couldn't open component for inputUnit")
     
     var disableFlag: UInt32 = 0
     var enableFlag: UInt32 = 1
     let outputBus: AudioUnitScope = 0
     let inputBus: AudioUnitScope = 1
     
-    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, inputBus, &enableFlag, UInt32(sizeof(enableFlag.dynamicType))),
-        operation: "Couldn't enable input on I/O unit")
-    
-    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, outputBus, &disableFlag, UInt32(sizeof(disableFlag.dynamicType))),
-        operation: "Couldn't disable output on I/O unit")
+    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, inputBus, &enableFlag, UInt32(sizeof(enableFlag.dynamicType))), operation: "Couldn't enable input on I/O unit")
+    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, outputBus, &disableFlag, UInt32(sizeof(disableFlag.dynamicType))), operation: "Couldn't disable output on I/O unit")
     
     var defaultDevice: AudioObjectID = kAudioObjectUnknown
     var propertySize = UInt32(sizeof(defaultDevice.dynamicType))
     var defaultDeviceProperty = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMaster)
     
-    CheckError(AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &defaultDeviceProperty, 0, nil, &propertySize, &defaultDevice),
-        operation: "Couldn't get default input device")
-    
-    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, outputBus, &defaultDevice, UInt32(sizeof(defaultDevice.dynamicType))),
-        operation: "Couldn't set default device on I/O unit")
+    CheckError(AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &defaultDeviceProperty, 0, nil, &propertySize, &defaultDevice), operation: "Couldn't get default input device")
+    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, outputBus, &defaultDevice, UInt32(sizeof(defaultDevice.dynamicType))), operation: "Couldn't set default device on I/O unit")
     
     propertySize = UInt32(sizeof(AudioStreamBasicDescription))
-    CheckError(AudioUnitGetProperty(player.inputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, inputBus, &player.streamFormat, &propertySize),
-        operation: "Couldn't get ASBD from input unit")
+    CheckError(AudioUnitGetProperty(player.inputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, inputBus, &player.streamFormat, &propertySize), operation: "Couldn't get ASBD from input unit")
     
     var deviceFormat = AudioStreamBasicDescription()
     
-    CheckError(AudioUnitGetProperty(player.inputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, inputBus, &deviceFormat, &propertySize),
-        operation: "Couldn't get ASBD from input unit")
-    
+    CheckError(AudioUnitGetProperty(player.inputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, inputBus, &deviceFormat, &propertySize), operation: "Couldn't get ASBD from input unit")
+
     player.streamFormat.mSampleRate = deviceFormat.mSampleRate
     player.streamFormat.mChannelsPerFrame = 1 // set to mono
     
     propertySize = UInt32(sizeof(AudioStreamBasicDescription))
-    
-    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, inputBus, &player.streamFormat, propertySize),
-        operation: "Couldn't set ASBD on input unit")
+
+    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, inputBus, &player.streamFormat, propertySize), operation: "Couldn't set ASBD on input unit")
     
     var bufferSizeFrames: UInt32 = 0
     propertySize = UInt32(sizeof(UInt32))
     
-    CheckError(AudioUnitGetProperty(player.inputUnit, kAudioDevicePropertyBufferFrameSize, kAudioUnitScope_Global, 0, &bufferSizeFrames, &propertySize),
-        operation: "Couldn't get buffer frame size from input unit")
+    CheckError(AudioUnitGetProperty(player.inputUnit, kAudioDevicePropertyBufferFrameSize, kAudioUnitScope_Global, 0, &bufferSizeFrames, &propertySize), operation: "Couldn't get buffer frame size from input unit")
     
     let bufferSizeBytes = bufferSizeFrames * UInt32(sizeof(Float32))
     
@@ -166,7 +162,8 @@ func CreateInputUnit(inout player: AUGraphPlayer) {
     player.inputBuffer = AudioBufferList.allocate(maximumBuffers: Int(player.streamFormat.mChannelsPerFrame))
     
     // Pre-malloc buffers for AudioBuffersList
-    for i in 0..<Int(player.inputBuffer.unsafeMutablePointer.memory.mNumberBuffers) {
+    for i in 0 ..< Int(player.inputBuffer.unsafeMutablePointer.memory.mNumberBuffers)
+    {
         player.inputBuffer[i].mNumberChannels = 1
         player.inputBuffer[i].mDataByteSize = bufferSizeBytes
         player.inputBuffer[i].mData = malloc(Int(bufferSizeBytes))
@@ -178,11 +175,8 @@ func CreateInputUnit(inout player: AUGraphPlayer) {
     // Set render proc to supply samples from input unit
     var callbackStruct = AURenderCallbackStruct(inputProc: InputRenderProc, inputProcRefCon: &player)
     
-    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioOutputUnitProperty_SetInputCallback, kAudioUnitScope_Global, 0, &callbackStruct, UInt32(sizeof(callbackStruct.dynamicType))),
-        operation: "Couldn't set input callback")
-    
-    CheckError(AudioUnitInitialize(player.inputUnit),
-        operation: "Couldn't initialize input unit")
+    CheckError(AudioUnitSetProperty(player.inputUnit, kAudioOutputUnitProperty_SetInputCallback, kAudioUnitScope_Global, 0, &callbackStruct, UInt32(sizeof(callbackStruct.dynamicType))), operation: "Couldn't set input callback")
+    CheckError(AudioUnitInitialize(player.inputUnit), operation: "Couldn't initialize input unit")
     
     player.firstInputSampleTime = -1
     player.inToOutSampleTimeOffset = -1
@@ -190,124 +184,108 @@ func CreateInputUnit(inout player: AUGraphPlayer) {
     print("Bottom of CreateInputUnit\n")
 }
 
-func CreateAUGraph(inout player: AUGraphPlayer) {
+func CreateAUGraph(inout player: AUGraphPlayer)
+{
     // Create a new AUGraph
-    CheckError(NewAUGraph(&player.graph),
-        operation: "NewAUGraph failed")
+    CheckError(NewAUGraph(&player.graph), operation: "NewAUGraph failed")
     
     // Generate a description that matches default output
     var outputcd = AudioComponentDescription(componentType: kAudioUnitType_Output, componentSubType: kAudioUnitSubType_DefaultOutput, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
-    
     let comp = AudioComponentFindNext(nil, &outputcd)
-    
-    guard comp != nil else {
+
+    guard comp != nil else
+    {
         print("Can't get output unit")
         exit(-1)
     }
     
     // Adds a node with above description to the graph
     var outputNode = AUNode()
-    CheckError(AUGraphAddNode(player.graph, &outputcd, &outputNode),
-        operation: "AUGraphAddNode[kAudioUnitSubType_DefaultOutput] failed")
+    CheckError(AUGraphAddNode(player.graph, &outputcd, &outputNode), operation: "AUGraphAddNode[kAudioUnitSubType_DefaultOutput] failed")
     
-    #if PART_II
-        // Add a mixer to the graph
-        var mixercd = AudioComponentDescription(componentType: kAudioUnitType_Mixer, componentSubType: kAudioUnitSubType_StereoMixer, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
-        var mixerNode = AUNode()
-        
-        CheckError(AUGraphAddNode(player.graph, &mixercd, &mixerNode),
-            operation: "AUGraphAddNode[kAudioUnitSubType_StereoMixer] failed")
-        
-        // Add the speech synthesizer to the graph
-        var speechcd = AudioComponentDescription(componentType: kAudioUnitType_Generator, componentSubType: kAudioUnitSubType_SpeechSynthesis, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
-        var speechNode = AUNode()
-        
-        CheckError(AUGraphAddNode(player.graph, &speechcd, &speechNode),
-            operation: "AUGraphAddNode[kAudioUnitSubType_SpeechSynthesis] failed")
-        
-        // Opening the graph opens all contained audio units but does not allocate any resources yet
-        CheckError(AUGraphOpen(player.graph), operation: "AUGraphOpen failed")
-        
-        // Get the reference to the AudioUnit objects for the various nodes
-        CheckError(AUGraphNodeInfo(player.graph, outputNode, nil, &player.outputUnit),
-            operation: "AUGraphNodeInfo failed")
-        CheckError(AUGraphNodeInfo(player.graph, speechNode, nil, &player.speechUnit),
-            operation: "AUGraphNodeInfo failed")
-        
-        var mixerUnit: AudioUnit = nil
-        
-        CheckError(AUGraphNodeInfo(player.graph, mixerNode, nil, &mixerUnit),
-            operation: "AUGraphNodeInfo failed")
-        
-        // Set ASBDs here
-        let propertySize = UInt32(sizeof(AudioStreamBasicDescription))
-        
-        CheckError(AudioUnitSetProperty(player.outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &player.streamFormat, propertySize),
-            operation: "Couldn't set stream format on output unit")
-        
-        CheckError(AudioUnitSetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &player.streamFormat, propertySize),
-            operation: "Couldn't set stream format on mixer unit bus 0")
-        CheckError(AudioUnitSetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 1, &player.streamFormat, propertySize),
-            operation: "Couldn't set stream format on mixer unit bus 1")
-        
-        // Connections
-        // Mixer output scope / bus 0 to outputUnit scope / bus 0
-        // Mixer input scope / bus 0 to render callback
-        // (from ringbuffer, which in turn is from inputUnit)
-        // Mixer input scope / bus 1 to speech unit output scope / bus 0
-        
-        CheckError(AUGraphConnectNodeInput(player.graph, mixerNode, 0, outputNode, 0),
-            operation: "Couldn't connect mixer output(0) to outputNode (0)")
-        
-        CheckError(AUGraphConnectNodeInput(player.graph, speechNode, 0, mixerNode, 1),
-            operation: "Couldn't connect speech synth unit output (0) to mixer input (1)")
-        
-        var callbackStruct = AURenderCallbackStruct(inputProc: GraphRenderProc, inputProcRefCon: &player)
-        
-        CheckError(AudioUnitSetProperty(mixerUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Global, 0, &callbackStruct, UInt32(sizeof(callbackStruct.dynamicType))),
-            operation: "Couldn't set render callback on mixer unit")
-        
-        #else
-        // Opening the graph opens all contained audio units, but does not allocate any resources yet
-        CheckError(AUGraphOpen(player.graph),
-            operation: "AUGraphOpen failed")
-        
-        // Get the reference to the AudioUnit object for the output graph node
-        CheckError(AUGraphNodeInfo(player.graph, outputNode, nil, &player.outputUnit),
-            operation: "AUGraphNodeInfo failed")
-        
-        // Set the stream format on the output unit's input scope
-        let propertySize = UInt32(sizeof(AudioStreamBasicDescription))
-        CheckError(AudioUnitSetProperty(player.outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &player.streamFormat, propertySize),
-            operation: "Couldn't set stream format on output unit")
-        
-        var callbackStruct = AURenderCallbackStruct(inputProc: GraphRenderProc, inputProcRefCon: &player)
-        
-        CheckError(AudioUnitSetProperty(player.outputUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Global, 0, &callbackStruct, UInt32(sizeof(callbackStruct.dynamicType))),
-            operation: "Couldn't set render callback on output unit")
-    #endif
+#if PART_II
+    // Add a mixer to the graph
+    var mixercd = AudioComponentDescription(componentType: kAudioUnitType_Mixer, componentSubType: kAudioUnitSubType_StereoMixer, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
+    var mixerNode = AUNode()
+    
+    CheckError(AUGraphAddNode(player.graph, &mixercd, &mixerNode), operation: "AUGraphAddNode[kAudioUnitSubType_StereoMixer] failed")
+    
+    // Add the speech synthesizer to the graph
+    var speechcd = AudioComponentDescription(componentType: kAudioUnitType_Generator, componentSubType: kAudioUnitSubType_SpeechSynthesis, componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0)
+    var speechNode = AUNode()
+    
+    CheckError(AUGraphAddNode(player.graph, &speechcd, &speechNode), operation: "AUGraphAddNode[kAudioUnitSubType_SpeechSynthesis] failed")
+    
+    // Opening the graph opens all contained audio units but does not allocate any resources yet
+    CheckError(AUGraphOpen(player.graph), operation: "AUGraphOpen failed")
+    
+    // Get the reference to the AudioUnit objects for the various nodes
+    CheckError(AUGraphNodeInfo(player.graph, outputNode, nil, &player.outputUnit), operation: "AUGraphNodeInfo failed")
+    CheckError(AUGraphNodeInfo(player.graph, speechNode, nil, &player.speechUnit), operation: "AUGraphNodeInfo failed")
+    
+    var mixerUnit: AudioUnit = nil
+    
+    CheckError(AUGraphNodeInfo(player.graph, mixerNode, nil, &mixerUnit), operation: "AUGraphNodeInfo failed")
+    
+    // Set ASBDs here
+    let propertySize = UInt32(sizeof(AudioStreamBasicDescription))
+    
+    CheckError(AudioUnitSetProperty(player.outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &player.streamFormat, propertySize), operation: "Couldn't set stream format on output unit")
+    
+    CheckError(AudioUnitSetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &player.streamFormat, propertySize), operation: "Couldn't set stream format on mixer unit bus 0")
+    CheckError(AudioUnitSetProperty(mixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 1, &player.streamFormat, propertySize), operation: "Couldn't set stream format on mixer unit bus 1")
+    
+    // Connections
+    // Mixer output scope / bus 0 to outputUnit scope / bus 0
+    // Mixer input scope / bus 0 to render callback
+    // (from ringbuffer, which in turn is from inputUnit)
+    // Mixer input scope / bus 1 to speech unit output scope / bus 0
+    
+    CheckError(AUGraphConnectNodeInput(player.graph, mixerNode, 0, outputNode, 0), operation: "Couldn't connect mixer output(0) to outputNode (0)")
+    
+    CheckError(AUGraphConnectNodeInput(player.graph, speechNode, 0, mixerNode, 1), operation: "Couldn't connect speech synth unit output (0) to mixer input (1)")
+    
+    var callbackStruct = AURenderCallbackStruct(inputProc: GraphRenderProc, inputProcRefCon: &player)
+    
+    CheckError(AudioUnitSetProperty(mixerUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Global, 0, &callbackStruct, UInt32(sizeof(callbackStruct.dynamicType))), operation: "Couldn't set render callback on mixer unit")
+    
+    #else
+    // Opening the graph opens all contained audio units, but does not allocate any resources yet
+    CheckError(AUGraphOpen(player.graph), operation: "AUGraphOpen failed")
+    
+    // Get the reference to the AudioUnit object for the output graph node
+    CheckError(AUGraphNodeInfo(player.graph, outputNode, nil, &player.outputUnit), operation: "AUGraphNodeInfo failed")
+    
+    // Set the stream format on the output unit's input scope
+    let propertySize = UInt32(sizeof(AudioStreamBasicDescription))
+    CheckError(AudioUnitSetProperty(player.outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &player.streamFormat, propertySize), operation: "Couldn't set stream format on output unit")
+    
+    var callbackStruct = AURenderCallbackStruct(inputProc: GraphRenderProc, inputProcRefCon: &player)
+    
+    CheckError(AudioUnitSetProperty(player.outputUnit, kAudioUnitProperty_SetRenderCallback, kAudioUnitScope_Global, 0, &callbackStruct, UInt32(sizeof(callbackStruct.dynamicType))), operation: "Couldn't set render callback on output unit")
+#endif
     
     // Now initialize the graph (causes resources to be allocated)
-    CheckError(AUGraphInitialize(player.graph),
-        operation: "AUGraphInitialize failed")
+    CheckError(AUGraphInitialize(player.graph), operation: "AUGraphInitialize failed")
     
     player.firstOutputSampleTime = -1
 }
 
 
 #if PART_II
-    func PrepareSpeechAU(inout player: AUGraphPlayer) {
-        var chan: SpeechChannel = nil
-        var propSize = UInt32(sizeof(SpeechChannel))
-        
-        CheckError(AudioUnitGetProperty(player.speechUnit, kAudioUnitProperty_SpeechChannel, kAudioUnitScope_Global, 0, &chan, &propSize),
-            operation: "AudioUnitGetProperty[kAudioUnitProperty_SpeechChannel] failed")
-        
-        SpeakCFString(chan, "Please purchase as many copies of our Core Audio book as you possibly can" as CFString, nil)
-    }
+func PrepareSpeechAU(inout player: AUGraphPlayer)
+{
+    var chan: SpeechChannel = nil
+    var propSize = UInt32(sizeof(SpeechChannel))
+    
+    CheckError(AudioUnitGetProperty(player.speechUnit, kAudioUnitProperty_SpeechChannel, kAudioUnitScope_Global, 0, &chan, &propSize), operation: "AudioUnitGetProperty[kAudioUnitProperty_SpeechChannel] failed")
+    
+    SpeakCFString(chan, "Please purchase as many copies of our Core Audio book as you possibly can" as CFString, nil)
+}
 #endif
 
-func main() {
+func main()
+{
     var player = AUGraphPlayer()
     
     // Create the input unit
@@ -316,9 +294,9 @@ func main() {
     // Build a graph with output unit
     CreateAUGraph(&player)
     
-    #if PART_II
-        PrepareSpeechAU(&player)
-    #endif
+#if PART_II
+    PrepareSpeechAU(&player)
+#endif
     
     // Start playing
     CheckError(AudioOutputUnitStart(player.inputUnit), operation: "AudioUnitOutputStart failed")
