@@ -12,7 +12,8 @@ import AudioToolbox
 let kInputFileLocation = "/Users/alestsurko/Desktop/FBA1.mp3" as CFString
 
 // MARK: User data struct (it's better to use reference type class in Swift version)
-class AudioConverterSettings {
+class AudioConverterSettings
+{
     var inputFormat = AudioStreamBasicDescription()
     var outputFormat = AudioStreamBasicDescription()
     
@@ -28,16 +29,20 @@ class AudioConverterSettings {
 }
 
 // MARK: Utility functions
-func CheckError(error: OSStatus, operation: String) {
-    guard error != noErr else {
+func CheckError(error: OSStatus, operation: String)
+{
+    guard error != noErr else
+    {
         return
     }
     
     var result: String = ""
     var char = Int(error.bigEndian)
     
-    for _ in 0..<4 {
-        guard isprint(Int32(char&255)) == 1 else {
+    for _ in 0..<4
+    {
+        guard isprint(Int32(char&255)) == 1 else
+        {
             result = "\(error)"
             break
         }
@@ -50,30 +55,36 @@ func CheckError(error: OSStatus, operation: String) {
     exit(1)
 }
 
-func Convert(var settings: AudioConverterSettings) {
+func Convert(settings: AudioConverterSettings)
+{
+    var localSettings = settings
     // Create the audioConverter object
     var audioConverter: AudioConverterRef = nil
     
-    CheckError(AudioConverterNew(&settings.inputFormat, &settings.outputFormat, &audioConverter),
+    CheckError(AudioConverterNew(&localSettings.inputFormat, &localSettings.outputFormat, &audioConverter),
         operation: "AudioConverterNew failed")
     
     var packetsPerBuffer: UInt32 = 0
     var outputBufferSize: UInt32 = 32 * 1024
-    var sizePerPacket: UInt32 = settings.inputFormat.mBytesPerPacket
+    var sizePerPacket: UInt32 = localSettings.inputFormat.mBytesPerPacket
     
-    if sizePerPacket == 0 {
+    if sizePerPacket == 0
+    {
         var size = UInt32(sizeof(sizePerPacket.dynamicType))
         
         CheckError(AudioConverterGetProperty(audioConverter, kAudioConverterPropertyMaximumOutputPacketSize, &size, &sizePerPacket),
             operation: "Couldn't get kAudioConverterPropertyMaximumOutputPacketSize")
         
-        if sizePerPacket > outputBufferSize {
+        if sizePerPacket > outputBufferSize
+        {
             outputBufferSize = sizePerPacket
         }
         
         packetsPerBuffer = outputBufferSize / sizePerPacket
-        settings.inputFilePacketDescriptions = UnsafeMutablePointer<AudioStreamPacketDescription>(malloc(sizeof(AudioStreamPacketDescription) * Int(packetsPerBuffer)))
-    } else {
+        localSettings.inputFilePacketDescriptions = UnsafeMutablePointer<AudioStreamPacketDescription>(malloc(sizeof(AudioStreamPacketDescription) * Int(packetsPerBuffer)))
+    }
+    else
+    {
         packetsPerBuffer = outputBufferSize / sizePerPacket
     }
     
@@ -81,32 +92,37 @@ func Convert(var settings: AudioConverterSettings) {
     
     var outputFilePacketPosition: UInt32 = 0
     
-    while true {
+    while true
+    {
         var convertedData = AudioBufferList()
         convertedData.mNumberBuffers = 1
-        convertedData.mBuffers.mNumberChannels = settings.inputFormat.mChannelsPerFrame
+        convertedData.mBuffers.mNumberChannels = localSettings.inputFormat.mChannelsPerFrame
         convertedData.mBuffers.mDataByteSize = outputBufferSize
         convertedData.mBuffers.mData = outputBuffer
         
         var ioOutputDataPackets = packetsPerBuffer
         
-        let error = AudioConverterFillComplexBuffer(audioConverter, AudioConverterCallback, &settings, &ioOutputDataPackets, &convertedData, settings.inputFilePacketDescriptions != nil ? settings.inputFilePacketDescriptions : nil)
+        let error = AudioConverterFillComplexBuffer(audioConverter, AudioConverterCallback, &localSettings, &ioOutputDataPackets, &convertedData, localSettings.inputFilePacketDescriptions != nil ? localSettings.inputFilePacketDescriptions : nil)
         
-        if error != noErr || ioOutputDataPackets < 1 {
+        if error != noErr || ioOutputDataPackets < 1
+        {
             break // This is the termination condition
         }
         
         // Write the converted data to the output file
-        CheckError(AudioFileWritePackets(settings.outputFile, false, ioOutputDataPackets, nil, Int64(outputFilePacketPosition/settings.outputFormat.mBytesPerPacket), &ioOutputDataPackets, convertedData.mBuffers.mData), operation: "Couldn't write packets to file")
+        CheckError(AudioFileWritePackets(localSettings.outputFile, false, ioOutputDataPackets, nil, Int64(outputFilePacketPosition/localSettings.outputFormat.mBytesPerPacket), &ioOutputDataPackets, convertedData.mBuffers.mData), operation: "Couldn't write packets to file")
         
-        outputFilePacketPosition += (ioOutputDataPackets * settings.outputFormat.mBytesPerPacket)
+        outputFilePacketPosition += (ioOutputDataPackets * localSettings.outputFormat.mBytesPerPacket)
     }
     
     AudioConverterDispose(audioConverter)
 }
 
 // MARK: Converter callback function
-let AudioConverterCallback: AudioConverterComplexInputDataProc = {(inAudioConverter, ioDataPacketCount, ioData, outDataPacketDescription, inUserData) -> OSStatus in
+let AudioConverterCallback: AudioConverterComplexInputDataProc =
+{
+    ( inAudioConverter, ioDataPacketCount, ioData, outDataPacketDescription, inUserData) -> OSStatus in
+
     let audioConverterSettings = UnsafeMutablePointer<AudioConverterSettings>(inUserData).memory
     
     ioData.memory.mBuffers.mData = nil
@@ -114,15 +130,18 @@ let AudioConverterCallback: AudioConverterComplexInputDataProc = {(inAudioConver
     
     // If there are not enough packets to satisfy request,
     // then read what's left
-    if audioConverterSettings.inputFilePacketIndex + UInt64(ioDataPacketCount.memory) > audioConverterSettings.inputFilePacketCount {
+    if audioConverterSettings.inputFilePacketIndex + UInt64(ioDataPacketCount.memory) > audioConverterSettings.inputFilePacketCount
+    {
         ioDataPacketCount.memory = UInt32(audioConverterSettings.inputFilePacketCount - audioConverterSettings.inputFilePacketIndex)
     }
     
-    if ioDataPacketCount.memory == 0 {
+    if ioDataPacketCount.memory == 0
+    {
         return noErr
     }
     
-    if audioConverterSettings.sourceBuffer != nil {
+    if audioConverterSettings.sourceBuffer != nil
+    {
         free(audioConverterSettings.sourceBuffer)
         audioConverterSettings.sourceBuffer = nil
     }
@@ -133,9 +152,12 @@ let AudioConverterCallback: AudioConverterComplexInputDataProc = {(inAudioConver
     // AudioFileReadPackets was deprecated in OS X 10.10 and iOS 8
     var result = AudioFileReadPackets(audioConverterSettings.inputFile, true, &outByteCount, audioConverterSettings.inputFilePacketDescriptions, Int64(audioConverterSettings.inputFilePacketIndex), ioDataPacketCount, audioConverterSettings.sourceBuffer)
     
-    if result == kAudioFileEndOfFileError && ioDataPacketCount.memory > 0 {
+    if result == kAudioFileEndOfFileError && ioDataPacketCount.memory > 0
+    {
         result = noErr
-    } else if result != noErr {
+    }
+    else if result != noErr
+    {
         return result
     }
     
@@ -143,7 +165,8 @@ let AudioConverterCallback: AudioConverterComplexInputDataProc = {(inAudioConver
     ioData.memory.mBuffers.mData = audioConverterSettings.sourceBuffer
     ioData.memory.mBuffers.mDataByteSize = outByteCount
 
-    if outDataPacketDescription != nil {
+    if outDataPacketDescription != nil
+    {
         outDataPacketDescription.memory = audioConverterSettings.inputFilePacketDescriptions
     }
     
@@ -151,7 +174,8 @@ let AudioConverterCallback: AudioConverterComplexInputDataProc = {(inAudioConver
 }
 
 // MARK: Main function
-func main() {
+func main()
+{
     // Open input file
     let audioConverterSettings = AudioConverterSettings()
     

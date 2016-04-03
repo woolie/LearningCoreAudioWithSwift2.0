@@ -10,23 +10,28 @@ import AudioToolbox
 let kNumberRecordBuffers = 3
 
 // MARK: User data struct (it's better to use reference type class in Swift version)
-class Recorder {
+class Recorder
+{
     var recordFile: AudioFileID = nil
     var recordPacket: Int64 = 0
     var running: Bool = false
 }
 
 // MARK: Utility functions
-func CheckError(error: OSStatus, operation: String) {
-    guard error != noErr else {
+func CheckError(error: OSStatus, operation: String)
+{
+    guard error != noErr else
+    {
         return
     }
     
     var result: String = ""
     var char = Int(error.bigEndian)
     
-    for _ in 0..<4 {
-        guard isprint(Int32(char&255)) == 1 else {
+    for _ in 0..<4
+    {
+        guard isprint(Int32(char&255)) == 1 else
+        {
             result = "\(error)"
             break
         }
@@ -39,7 +44,8 @@ func CheckError(error: OSStatus, operation: String) {
     exit(1)
 }
 
-func GetDefaultInputDeviceSampleRate(inout outSampleRate: Double) -> OSStatus {
+func GetDefaultInputDeviceSampleRate(inout outSampleRate: Double) -> OSStatus
+{
     var error: OSStatus
     var deviceID: AudioDeviceID = 0
     var propertyAddress = AudioObjectPropertyAddress()
@@ -51,7 +57,8 @@ func GetDefaultInputDeviceSampleRate(inout outSampleRate: Double) -> OSStatus {
     propertySize = UInt32(sizeof(AudioDeviceID))
     error = AudioHardwareServiceGetPropertyData(UInt32(kAudioObjectSystemObject), &propertyAddress, 0, nil, &propertySize, &deviceID)
     
-    if error != noErr {
+    if error != noErr
+    {
         return error
     }
     
@@ -64,13 +71,15 @@ func GetDefaultInputDeviceSampleRate(inout outSampleRate: Double) -> OSStatus {
     return error
 }
 
-func CopyEncoderCookieToFile(queue: AudioQueueRef, theFile: AudioFileID) {
+func CopyEncoderCookieToFile(queue: AudioQueueRef, theFile: AudioFileID)
+{
     var error: OSStatus
     var propertySize = UInt32()
     
     error = AudioQueueGetPropertySize(queue, kAudioConverterCompressionMagicCookie, &propertySize)
     
-    if error == noErr && propertySize > 0 {
+    if error == noErr && propertySize > 0
+    {
         let magicCookie = UnsafeMutablePointer<UInt8>(malloc(Int(propertySize)))
         
         error = AudioQueueGetProperty(queue, kAudioQueueProperty_MagicCookie, magicCookie, &propertySize)
@@ -85,37 +94,47 @@ func CopyEncoderCookieToFile(queue: AudioQueueRef, theFile: AudioFileID) {
     }
 }
 
-func ComputeRecordBufferSize(format: AudioStreamBasicDescription, queue: AudioQueueRef, seconds: Double) -> Int {
+func ComputeRecordBufferSize(format: AudioStreamBasicDescription, queue: AudioQueueRef, seconds: Double) -> Int
+{
     var packets: Int, frames: Int, bytes: Int
     frames = Int(ceil(seconds * format.mSampleRate))
     
     
-    if format.mBytesPerFrame > 0 {
+    if format.mBytesPerFrame > 0
+    {
         bytes = frames * Int(format.mBytesPerFrame)
-    } else {
+    }
+    else
+    {
         var maxPacketSize = UInt32()
         
-        if format.mBytesPerPacket > 0 {
+        if format.mBytesPerPacket > 0
+        {
             // Constant packet size
             maxPacketSize = format.mBytesPerPacket
-        } else {
+        }
+        else
+        {
             // Get the largest single packet size possible
             var propertySize = UInt32(sizeof(maxPacketSize.dynamicType))
-            
-            CheckError(
-                AudioQueueGetProperty(queue, kAudioConverterPropertyMaximumOutputPacketSize, &maxPacketSize, &propertySize),
+
+            CheckError(AudioQueueGetProperty(queue, kAudioConverterPropertyMaximumOutputPacketSize, &maxPacketSize, &propertySize),
                 operation: "Couldn't get queue's maximum output packet size")
         }
         
-        if format.mFramesPerPacket > 0 {
+        if format.mFramesPerPacket > 0
+        {
             packets = frames / Int(format.mFramesPerPacket)
-        } else {
+        }
+        else
+        {
             // Worst-case scenario: 1 frame in a packet
             packets = frames
         }
         
         // Sanity check
-        if packets == 0 {
+        if packets == 0
+        {
             packets = 1
         }
         
@@ -129,7 +148,8 @@ func ComputeRecordBufferSize(format: AudioStreamBasicDescription, queue: AudioQu
 let AQInputCallback: AudioQueueInputCallback = {(var inUserData, inQueue, inBuffer, inStartTime, var inNumPackets, inPacketDesc) -> () in
     let recorder = UnsafeMutablePointer<Recorder>(inUserData).memory
     
-    if inNumPackets > 0 {
+    if inNumPackets > 0
+    {
         // Write packets to a file
         CheckError(
             AudioFileWritePackets(recorder.recordFile, false, inBuffer.memory.mAudioDataByteSize, inPacketDesc, recorder.recordPacket, &inNumPackets, inBuffer.memory.mAudioData),
@@ -138,7 +158,8 @@ let AQInputCallback: AudioQueueInputCallback = {(var inUserData, inQueue, inBuff
         // Increment the packet index
         recorder.recordPacket += Int64(inNumPackets)
         
-        if recorder.running {
+        if recorder.running
+        {
             CheckError(AudioQueueEnqueueBuffer(inQueue, inBuffer, 0, nil), operation: "AudioQueueEnqueueBuffer failed")
             
             
@@ -155,7 +176,8 @@ let AQInputCallback: AudioQueueInputCallback = {(var inUserData, inQueue, inBuff
 }
 
 // MARK: main function
-func main() {
+func main()
+{
     // Set up format
     var recorder = Recorder()
     var recordFormat = AudioStreamBasicDescription()
@@ -204,7 +226,8 @@ func main() {
     // Other set up as needed
     let bufferByteSize = ComputeRecordBufferSize(recordFormat, queue: queue, seconds: 0.5)
     
-    for _ in 0..<kNumberRecordBuffers {
+    for _ in 0..<kNumberRecordBuffers
+    {
         var buffer = AudioQueueBufferRef()
         error = AudioQueueAllocateBuffer(queue, UInt32(bufferByteSize), &buffer)
         

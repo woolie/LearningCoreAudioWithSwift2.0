@@ -12,11 +12,13 @@ let SAMPLE_RATE: Float64 = 44100
 let DURATION = 5.0
 let FILENAME_FORMAT = "%0.3f-sine.aif"
 
-func main() {
+func main()
+{
     let argc = Process.argc
     let argv = Process.arguments
     
-    guard argc > 1 else {
+    guard argc > 1 else
+    {
         print("Usage: CAToneFileGenerator n\n(where n is tone in Hz)")
         return
     }
@@ -56,8 +58,10 @@ func main() {
     var bytesToWrite: UInt32 = 2
     let wavelengthInSamples = SAMPLE_RATE/hz!
     
-    while sampleCount < maxSampleCount {
-        for n in 0..<Int(wavelengthInSamples) {
+    while sampleCount < maxSampleCount
+    {
+        for n in 0..<Int(wavelengthInSamples)
+        {
             // Square wave
 //            var sample = n < Int(wavelengthInSamples) / 2 ? (Int16.max).bigEndian : (Int16.min).bigEndian
             
@@ -70,7 +74,7 @@ func main() {
             audioErr = AudioFileWriteBytes(audioFile, false, Int64(sampleCount*2), &bytesToWrite, &sample)
             
             assert(audioErr == noErr)
-            sampleCount++
+            sampleCount += 1
         }
     }
     
