@@ -8,16 +8,19 @@
 import Foundation
 import AudioToolbox
 
-func main() {
+func main()
+{
     let argc = Process.argc
     let argv = Process.arguments
     
-    guard argc > 1 else {
+    guard argc > 1 else
+    {
         print("Usage: CAMetaData /full/path/to/audiofile\n")
         return
     }
-    
-    if let audiofilePath = NSString(UTF8String: argv[1])?.stringByExpandingTildeInPath {
+
+    if let audiofilePath = NSString(UTF8String: argv[1])?.stringByExpandingTildeInPath
+    {
         let audioURL = NSURL(fileURLWithPath: audiofilePath)
         var audiofile: AudioFileID = nil
         var theErr = noErr
@@ -43,7 +46,9 @@ func main() {
         
         assert(theErr == noErr)
         
-    } else {
+    }
+    else
+    {
         print("File not found\n")
     }
     
